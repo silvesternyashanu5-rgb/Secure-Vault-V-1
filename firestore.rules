@@ -1,0 +1,346 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function parentVaultExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function parentGuestRoomExists(userId, roomId) {
+      return exists(/databases/$(database)/documents/users/$(userId)/guestRooms/$(roomId));
+    }
+
+    function isValidUserVaultRoot(data, userId) {
+      return data.keys().hasAll(['ownerId', 'displayName', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'displayName', 'createdAt', 'updatedAt'])
+        && data.ownerId is string
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.displayName is string
+        && data.displayName.size() <= 120
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdsSettings(ads) {
+      return ads is map
+        && ads.keys().hasAll(['personalizedAds', 'sponsoredTips', 'sponsorFrequency', 'adId'])
+        && ads.keys().hasOnly(['personalizedAds', 'sponsoredTips', 'sponsorFrequency', 'adId'])
+        && ads.personalizedAds is bool
+        && ads.sponsoredTips is bool
+        && ads.sponsorFrequency is string
+        && ads.sponsorFrequency in ['off', 'minimal', 'balanced']
+        && ads.adId is string
+        && ads.adId.size() >= 1
+        && ads.adId.size() <= 64;
+    }
+
+    function isValidVaultSettings(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'darkMode', 'calculatorDisguiseEnabled', 'biometricEnabled',
+          'autoUpdateEnabled', 'appDisplayName', 'appIconPreset',
+          'authMode', 'autoLockMinutes', 'cloudSyncEnabled', 'vaultSalt',
+          'wrappedVaultKey', 'wrappedVaultKeyIv', 'adsSettings',
+          'clientUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'darkMode', 'calculatorDisguiseEnabled', 'biometricEnabled',
+          'autoUpdateEnabled', 'appDisplayName', 'appIconPreset',
+          'authMode', 'autoLockMinutes', 'cloudSyncEnabled', 'vaultSalt',
+          'wrappedVaultKey', 'wrappedVaultKeyIv', 'adsSettings',
+          'clientUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.darkMode is string
+        && data.darkMode in ['system', 'light', 'dark']
+        && data.calculatorDisguiseEnabled is bool
+        && data.biometricEnabled is bool
+        && data.autoUpdateEnabled is bool
+        && data.appDisplayName is string
+        && data.appDisplayName.size() >= 1
+        && data.appDisplayName.size() <= 64
+        && data.appIconPreset is string
+        && data.appIconPreset in ['shield', 'calculator', 'notes', 'weather', 'calendar', 'music', 'compass', 'clock', 'custom']
+        && data.authMode is string
+        && data.authMode in ['pin', 'password']
+        && data.autoLockMinutes is number
+        && data.autoLockMinutes >= 0
+        && data.autoLockMinutes <= 1440
+        && data.cloudSyncEnabled is bool
+        && data.vaultSalt is string
+        && data.vaultSalt.size() >= 1
+        && data.vaultSalt.size() <= 128
+        && data.wrappedVaultKey is string
+        && data.wrappedVaultKey.size() <= 512
+        && data.wrappedVaultKeyIv is string
+        && data.wrappedVaultKeyIv.size() <= 128
+        && isValidAdsSettings(data.adsSettings)
+        && data.clientUpdatedAt is number
+        && data.clientUpdatedAt >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVaultItem(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'title', 'category', 'username', 'url',
+          'encryptedPayload', 'iv', 'favorite', 'deleted',
+          'clientUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'title', 'category', 'username', 'url',
+          'encryptedPayload', 'iv', 'favorite', 'deleted',
+          'clientUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 160
+        && data.category is string
+        && data.category in ['credential', 'note', 'card', 'document']
+        && data.username is string
+        && data.username.size() <= 200
+        && data.url is string
+        && data.url.size() <= 500
+        && data.encryptedPayload is string
+        && data.encryptedPayload.size() >= 1
+        && data.encryptedPayload.size() <= 100000
+        && data.iv is string
+        && data.iv.size() >= 1
+        && data.iv.size() <= 128
+        && data.favorite is bool
+        && data.deleted is bool
+        && data.clientUpdatedAt is number
+        && data.clientUpdatedAt >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidGuestRoom(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'guestNumber', 'label', 'deleted',
+          'clientUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'guestNumber', 'label', 'deleted',
+          'clientUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.guestNumber is number
+        && data.guestNumber >= 1
+        && data.guestNumber <= 999999
+        && data.label is string
+        && data.label.size() >= 1
+        && data.label.size() <= 80
+        && data.deleted is bool
+        && data.clientUpdatedAt is number
+        && data.clientUpdatedAt >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidGuestRoomItem(data, userId, roomId) {
+      return data.keys().hasAll([
+          'ownerId', 'roomId', 'title', 'category', 'username', 'url',
+          'secretValue', 'notes', 'favorite', 'deleted',
+          'clientUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'roomId', 'title', 'category', 'username', 'url',
+          'secretValue', 'notes', 'favorite', 'deleted',
+          'clientUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.roomId is string
+        && isValidId(data.roomId)
+        && data.roomId == roomId
+        && data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 160
+        && data.category is string
+        && data.category in ['credential', 'note', 'card', 'document']
+        && data.username is string
+        && data.username.size() <= 200
+        && data.url is string
+        && data.url.size() <= 500
+        && data.secretValue is string
+        && data.secretValue.size() <= 10000
+        && data.notes is string
+        && data.notes.size() <= 20000
+        && data.favorite is bool
+        && data.deleted is bool
+        && data.clientUpdatedAt is number
+        && data.clientUpdatedAt >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserVaultRoot(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserVaultRoot(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']);
+      allow delete: if isValidId(userId) && isOwner(userId);
+
+      match /settings/{settingId} {
+        allow get: if isValidId(userId) && isValidId(settingId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(settingId)
+          && isOwner(userId)
+          && isValidVaultSettings(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && parentVaultExists(userId);
+        allow update: if isValidId(userId)
+          && isValidId(settingId)
+          && isOwner(userId)
+          && isValidVaultSettings(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'darkMode', 'calculatorDisguiseEnabled', 'biometricEnabled',
+            'autoUpdateEnabled', 'appDisplayName', 'appIconPreset',
+            'authMode', 'autoLockMinutes', 'cloudSyncEnabled', 'vaultSalt',
+            'wrappedVaultKey', 'wrappedVaultKeyIv', 'adsSettings',
+            'clientUpdatedAt', 'updatedAt'
+          ])
+          && parentVaultExists(userId);
+        allow delete: if isValidId(userId) && isValidId(settingId) && isOwner(userId);
+      }
+
+      match /vaultItems/{itemId} {
+        allow get: if isValidId(userId) && isValidId(itemId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(itemId)
+          && isOwner(userId)
+          && isValidVaultItem(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && parentVaultExists(userId);
+        allow update: if isValidId(userId)
+          && isValidId(itemId)
+          && isOwner(userId)
+          && isValidVaultItem(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'category', 'username', 'url',
+            'encryptedPayload', 'iv', 'favorite', 'deleted',
+            'clientUpdatedAt', 'updatedAt'
+          ])
+          && parentVaultExists(userId);
+        allow delete: if isValidId(userId) && isValidId(itemId) && isOwner(userId);
+      }
+
+      match /guestRooms/{roomId} {
+        allow get: if isValidId(userId) && isValidId(roomId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(roomId)
+          && isOwner(userId)
+          && isValidGuestRoom(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && parentVaultExists(userId);
+        allow update: if isValidId(userId)
+          && isValidId(roomId)
+          && isOwner(userId)
+          && isValidGuestRoom(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().guestNumber == existing().guestNumber
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'label', 'deleted', 'clientUpdatedAt', 'updatedAt'
+          ])
+          && parentVaultExists(userId);
+        allow delete: if isValidId(userId) && isValidId(roomId) && isOwner(userId);
+
+        match /items/{itemId} {
+          allow get: if isValidId(userId) && isValidId(roomId) && isValidId(itemId) && isOwner(userId);
+          allow list: if isValidId(userId) && isValidId(roomId) && isOwner(userId)
+            && resource.data.ownerId == request.auth.uid
+            && resource.data.roomId == roomId;
+          allow create: if isValidId(userId)
+            && isValidId(roomId)
+            && isValidId(itemId)
+            && isOwner(userId)
+            && isValidGuestRoomItem(incoming(), userId, roomId)
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time
+            && parentVaultExists(userId)
+            && parentGuestRoomExists(userId, roomId);
+          allow update: if isValidId(userId)
+            && isValidId(roomId)
+            && isValidId(itemId)
+            && isOwner(userId)
+            && isValidGuestRoomItem(incoming(), userId, roomId)
+            && incoming().ownerId == existing().ownerId
+            && incoming().roomId == existing().roomId
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'category', 'username', 'url',
+              'secretValue', 'notes', 'favorite', 'deleted',
+              'clientUpdatedAt', 'updatedAt'
+            ])
+            && parentVaultExists(userId)
+            && parentGuestRoomExists(userId, roomId);
+          allow delete: if isValidId(userId) && isValidId(roomId) && isValidId(itemId) && isOwner(userId);
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "SecureVault",
+  "description": "Encrypted offline-first PWA vault with IndexedDB storage, PIN/password & biometric lock, calculator disguise, privacy-first ad controls, dark mode, and cloud sync.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

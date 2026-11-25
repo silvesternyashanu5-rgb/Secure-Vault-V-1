@@ -1,0 +1,356 @@
+{
+  "entities": {
+    "UserVaultRoot": {
+      "title": "UserVaultRoot",
+      "description": "Root vault anchor document for an authenticated user.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "displayName", "createdAt", "updatedAt"]
+    },
+    "VaultSettings": {
+      "title": "VaultSettings",
+      "description": "Synchronized vault configuration, disguise preference, dark mode, auto-update toggle, branding, encryption salt/wrapped key, and ads preferences.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "darkMode": {
+          "type": "string",
+          "enum": ["system", "light", "dark"]
+        },
+        "calculatorDisguiseEnabled": {
+          "type": "boolean"
+        },
+        "biometricEnabled": {
+          "type": "boolean"
+        },
+        "autoUpdateEnabled": {
+          "type": "boolean"
+        },
+        "appDisplayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "appIconPreset": {
+          "type": "string",
+          "enum": ["shield", "calculator", "notes", "weather", "calendar", "music", "compass", "clock", "custom"]
+        },
+        "authMode": {
+          "type": "string",
+          "enum": ["pin", "password"]
+        },
+        "autoLockMinutes": {
+          "type": "number"
+        },
+        "cloudSyncEnabled": {
+          "type": "boolean"
+        },
+        "vaultSalt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "wrappedVaultKey": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512
+        },
+        "wrappedVaultKeyIv": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "adsSettings": {
+          "type": "object",
+          "properties": {
+            "personalizedAds": { "type": "boolean" },
+            "sponsoredTips": { "type": "boolean" },
+            "sponsorFrequency": {
+              "type": "string",
+              "enum": ["off", "minimal", "balanced"]
+            },
+            "adId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        },
+        "clientUpdatedAt": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "darkMode",
+        "calculatorDisguiseEnabled",
+        "biometricEnabled",
+        "autoUpdateEnabled",
+        "appDisplayName",
+        "appIconPreset",
+        "authMode",
+        "autoLockMinutes",
+        "cloudSyncEnabled",
+        "vaultSalt",
+        "wrappedVaultKey",
+        "wrappedVaultKeyIv",
+        "adsSettings",
+        "clientUpdatedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VaultItem": {
+      "title": "VaultItem",
+      "description": "An encrypted vault entry synced between IndexedDB and Firestore.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "category": {
+          "type": "string",
+          "enum": ["credential", "note", "card", "document"]
+        },
+        "username": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "encryptedPayload": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "iv": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "favorite": {
+          "type": "boolean"
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "clientUpdatedAt": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "title",
+        "category",
+        "username",
+        "url",
+        "encryptedPayload",
+        "iv",
+        "favorite",
+        "deleted",
+        "clientUpdatedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "GuestRoom": {
+      "title": "GuestRoom",
+      "description": "Persistent account-style Guest Room profile synchronized alongside Main Vault users.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "guestNumber": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "clientUpdatedAt": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "guestNumber",
+        "label",
+        "deleted",
+        "clientUpdatedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "GuestRoomItem": {
+      "title": "GuestRoomItem",
+      "description": "An item belonging to a persistent Guest Room.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roomId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "category": {
+          "type": "string",
+          "enum": ["credential", "note", "card", "document"]
+        },
+        "username": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "url": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "secretValue": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10000
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 20000
+        },
+        "favorite": {
+          "type": "boolean"
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "clientUpdatedAt": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "roomId",
+        "title",
+        "category",
+        "username",
+        "url",
+        "secretValue",
+        "notes",
+        "favorite",
+        "deleted",
+        "clientUpdatedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserVaultRoot" },
+      "description": "Root user vault document anchoring subcollections."
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/VaultSettings" },
+      "description": "Per-user synchronized vault preferences, auto-update preference, branding, and wrapped vault key metadata."
+    },
+    "/users/{userId}/vaultItems/{itemId}": {
+      "schema": { "$ref": "#/entities/VaultItem" },
+      "description": "Per-user encrypted vault items."
+    },
+    "/users/{userId}/guestRooms/{roomId}": {
+      "schema": { "$ref": "#/entities/GuestRoom" },
+      "description": "Per-user persistent Guest Room profiles synchronized by the automatic update system."
+    },
+    "/users/{userId}/guestRooms/{roomId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/GuestRoomItem" },
+      "description": "Items stored inside a persistent Guest Room."
+    }
+  }
+}
